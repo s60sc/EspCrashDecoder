@@ -1,0 +1,246 @@
+
+
+<html>
+  <head>
+    <meta charset="UTF-8"/>  
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>ESP Crash Decoder</title>
+    <link rel="icon" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y="80" font-size="100">🔬</text></svg>'>
+    
+    <style>
+      :root {
+        /* colors used on web pages - see https://www.w3schools.com/colors/colors_names.asp */
+        
+        /* decoded trace colors */
+        --lineNumber: blue;
+        --functionName: blue;
+        --instAddress: brown;
+        --filePath: green;
+        --decodeErr: red;
+        
+        --buttonReady: silver;
+        --buttonActive: #A0A0A0; /* mid gray */
+        --buttonHover: #D0D0D0; /* light gray */
+        --buttonText: black;
+        --buttonLabel: black;
+        --itemInactive: #E0E0E0; /* very light gray */
+        --menuBackground: silver;
+        --inputText: navy;
+        --pageText: black; 
+        --inputBackground: WhiteSmoke; 
+        --alertMsg: red;
+        --itemBorder: silver; 
+        --pageBackground: white;
+        
+        /* element sizes */
+        --bodySize:1rem; /* used as basis for element, padding, and font sizes */
+        --buttonSize: var(--bodySize);
+        --buttonHalf: calc(var(--buttonSize) / 2);
+        --buttonQuart: calc(var(--buttonSize) / 4);
+        --buttonDbl: calc(var(--buttonSize) * 2);
+        --inputSize: calc(var(--bodySize) * 0.9);
+        --headingSize: calc(var(--bodySize) * 1.25);
+        --subheadingSize: var(--bodySize);
+        --footerSize: calc(var(--bodySize) * 0.7);   
+      }
+
+      body {
+        font-family: Helvetica  !important;
+        background: var(--pageBackground);
+        color: var(--pageText);
+        font-size: var(--bodySize);      
+      }
+      
+      button {
+        margin: var(--buttonQuart);
+        padding: var(--buttonQuart);
+        border: 0;
+        line-height: var(--headingSize);
+        cursor: pointer;
+        color: var(--buttonText);
+        background: var(--buttonReady);
+        border-radius: var(--buttonQuart);
+        font-size: var(--buttonSize);
+        outline: 0
+      }
+
+      button:active {
+       box-shadow: 0 0 0 var(--buttonQuart) var(--buttonActive);
+       background: var(--buttonActive);
+      }
+
+      button:hover {
+        background: var(--buttonHover);
+      }
+      
+      input, #crashData, #decodeData {
+        font: var(--inputSize) 'Courier New';
+        font-weight:bold;
+        color: var(--inputText);
+        background: var(--inputBackground);
+        min-width: calc(var(--buttonSize) * 10);     
+      }
+      
+      #crashData, #decodeData {
+        height:80%;
+        width:100%;
+        border:2px solid var(--itemBorder);
+        overflow:auto;
+        background: var(--inputBackground); 
+      }
+      
+      pre {
+        display: inline;
+        margin: 0;
+      }
+      
+    </style>
+  </head>
+  <body>
+    <div>
+      <textarea id="crashData" rows="20" cols="80" placeholder="Paste crash data from Arduino console"></textarea>
+    </div>
+    <div>
+      <br><br>
+      <button id="file-button" style="display:none">Select EspCrashDecoder.out<br>from Downloads folder</button>
+      <input type="file" accept=".out" id="file-input" style="display:none">
+    </div>
+    <div id='decodeData' style="display:none">
+    </div>
+    
+    <script>
+      const $ = document.querySelector.bind(document);
+      const crashData = $("#crashData");
+      const decodeData = $('#decodeData');
+      let exceptionText;
+      let addresses = "set listsize 1\n";
+      const infiles = $("#file-input");
+      const button = $('#file-button');
+      let reader = new FileReader();
+      let prevline;
+      const root =  getComputedStyle($(':root'));
+      
+      reader.onload = function(event) {
+        // get content of gdb output file once loaded
+        crashData.style.display = "none";
+        button.style.display = "none";
+        const lines = event.target.result.split(/[\r\n]+/);
+        let line;
+        lines.forEach(line => {
+          decodeData.innerHTML += prettyPrintGDBLine(line) + "<br>";
+        });
+        decodeData.style.display = "block";
+      };
+      
+      button.addEventListener('click', function() {
+        infiles.click()
+      });
+      
+      crashData.addEventListener("input", (event) => {
+        // process user pasted crash data
+        exceptionText = event.target.value;
+        runParser();
+      });
+      
+      infiles.addEventListener("change", (event) => {
+        // obtain user selected gdb output file
+        reader.readAsText(event.target.files[0]);
+      });
+      
+      function colorText(text, colorVar) {
+        const color = root.getPropertyValue('--' + colorVar);
+        return "<b><font color=" + color + ">" + text + "</font></b>";
+      }
+      
+      function prettyPrintGDBLine(line) {
+        // format gdb output to be more readable
+        let address = "", method = "", file = "", fileline = "", html = "";
+        
+        if (line.length == 0) return "";
+        if (!line.startsWith("0x")) {
+           let atIndex = line.indexOf(' ') - 1;
+           if (prevline == line.substring(0, atIndex)) {
+             // display code line
+             return "<pre>             </pre>" + "line " + colorText(prevline, "lineNumber") + ": "
+               + line.substring(atIndex+1);
+           } else return "";
+        }
+        
+        address = line.substring(0, line.indexOf(' '));
+        line = line.substring(line.indexOf(' ') + 1);
+
+        let atIndex = line.indexOf("is in ");
+        if (atIndex === -1) return colorText("Unable to format: " + address + " " + line, "decodeErr");
+
+        try {
+          method = line.substring(atIndex + 6, line.lastIndexOf('(') - 1);
+          fileline = line.substring(line.lastIndexOf('(') + 1, line.lastIndexOf(')'));
+          file = fileline.substring(0, fileline.lastIndexOf(':'));
+          line = fileline.substring(fileline.lastIndexOf(':') + 1);
+          prevline = line;
+
+          if (file.length > 0) {
+            let lastfs = file.lastIndexOf('/');
+            let lastbs = file.lastIndexOf('\\');
+            let slash = (lastfs > lastbs)?lastfs:lastbs;
+            if (slash !== -1) {
+              let filename = file.substring(slash + 1);
+              file = file.substring(0, slash + 1) + "<b>" + filename + "</b>";
+            }
+          }
+          
+          html = colorText(address, "instAddress") + ": " + colorText(method, "functionName") 
+            + " in " + colorText(file, "filePath") + " at line " + colorText(line, "lineNumber"); 
+
+        } catch (e) {
+          // not fully parsed, display what available
+          html = colorText(address, "instAddress") + ": " + colorText(line, "functionName"); 
+        }
+        return html;
+      }
+
+      function runParser() {
+        // Eztract address in PC and EXCVADDR registers
+        parseRegister("PC\\s*:\\s*(0x)?"); // address of instruction being executed on crash
+        parseRegister("EXCVADDR\\s*:\\s*(0x)?"); // address read / written by instruction
+        parseStackOrBacktrace(); // The backtrace of function calls leading to crash
+        addresses += "q\n";
+        // output addresses to file (as browser download due to browser security)
+        const file = new Blob([addresses], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(file);
+        a.download = "EspCrashDecoder.txt";
+        a.click();
+        button.style.display = "block";
+      }
+      
+      function parseRegister(regName) {
+        // Filter out a register output given a regex 
+        let content = exceptionText;
+        let p = new RegExp(regName + "(\\d|[a-f]|[A-F]){8}\\b");
+        let m = p.exec(content);
+        if (m !== null) {
+          let fs = content.substring(m.index, m.index + m[0].length);
+          let p2 = /(\d|[a-f]|[A-F]){8}\b/g;
+          let m2 = p2.exec(fs);
+          if (m2 !== null) addresses += "l *0x" + fs.substring(m2.index, m2.index + m2[0].length) + "\n";
+        }
+      }
+      
+      function parseStackOrBacktrace() {
+        // get instruction addresses from backtrace
+        let content = exceptionText;
+        let strip = new RegExp("Backtrace:(.)*");
+        let stripMatch = strip.exec(content);
+        if (!stripMatch) return; 
+        content = content.substring(stripMatch.index, stripMatch.index + stripMatch[0].length);
+
+        // extract instruction addresses of function calls (addresses start with 0x4)
+        let p = /4[0-3](\d|[a-f]|[A-F]){6}\b/g;
+        let m;
+        while ((m = p.exec(content)) !== null) addresses += "l *0x" + content.substring(m.index, p.lastIndex) +"\n";
+      }
+    
+    </script>
+  </body>
+</html>
