@@ -25,7 +25,7 @@ Only tested on the Chrome browser.
 
 Because the **EspCrashDecoder** is standalone it needs more steps than the [EspExceptionDecoder](https://github.com/me-no-dev/EspExceptionDecoder). 
 
-If a crash occurs when running a sketch, a local ELF file needs to be created by pressing `Alt+Ctrl+S` (Export Compiled Binary) in the Arduino IDE loaded with the sketch.
+If a crash occurs when running a sketch, a local ELF file needs to be created by pressing `Alt+Ctrl+S` (Export Compiled Binary) in the Arduino v2.x IDE loaded with the sketch.
 
 Double click the `EspCrashDecoder.bat` file which brings up a web page to paste in the stack trace from the Arduino console. 
 
