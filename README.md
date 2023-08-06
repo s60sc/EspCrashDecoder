@@ -15,7 +15,8 @@ A Windows batch file provides the overall control.
 Copy the `EspCrashDecoder` folder to the Arduino sketch folder to be analysed.  
 
 The **EspCrashDecoder** will work for ESP32, ESP32S2 and ESP32S3.  
-If ESP32S2 or ESP32S3 is being used, change the `espTarget` variable in the `EspCrashDecoder.bat` file.
+If ESP32S2 or ESP32S3 is being used, change the `espTarget` and `elfTarget` variables in the `EspCrashDecoder.bat` file.  
+Some boards may have a different `elfTarget` value, eg for ESP32 Pico D4 change `elfTarget` to `pico32` - check `build` folder in sketch.
 
 It is assumed that the `arduino-esp32` core containing `gdb` is installed in the current user profile.
 
