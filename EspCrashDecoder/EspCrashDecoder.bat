@@ -8,6 +8,10 @@ REM set espTarget to one of: esp32 esp32s2 esp32s3
 SET espTarget=esp32
 ECHO espTarget set as:  %espTarget%
 
+REM set elfTarget same as espTarget, except some boards may be different, eg ESP32 Pico D4 is pico32 instead of esp32
+SET elfTarget=esp32
+ECHO elfTarget set as:  %elfTarget%
+
 REM gdb path
 REM SET gdbPath=xtensa-%espTarget%-elf-gcc/esp-2021r2-patch5-8.4.0
 SET gdbPath=xtensa-esp-elf-gdb/11.2_20220823
@@ -36,5 +40,5 @@ GOTO CheckForFile
 :FoundFile
 REM use gdb to reference addresses to source code and output to file
 SET HOME=%USERPROFILE%
-%USERPROFILE%/AppData/Local/Arduino15/packages/esp32/tools/%gdbPath%/bin/xtensa-%espTarget%-elf-gdb.exe ../build/esp32.esp32.%espTarget%/%appname%.ino.elf --batch --command=%addresses% > %decoded% 2>err.txt
+%USERPROFILE%/AppData/Local/Arduino15/packages/esp32/tools/%gdbPath%/bin/xtensa-%espTarget%-elf-gdb.exe ../build/esp32.esp32.%elfTarget%/%appname%.ino.elf --batch --command=%addresses% > %decoded% 2>err.txt
 ECHO Finished
