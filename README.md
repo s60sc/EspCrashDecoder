@@ -39,4 +39,12 @@ The formatted decoded output in then displayed on the browser.
 
 <img src="extras/decoded.png" width="800" height="200">
 
+## No Output
+
+If the web page displays no output, check the contents of the file `err.txt` in the `EspCrashDecoder` folder: 
+* `The system cannot find the path specified.` The path to `gdb` is not valid, possibly due to new version of `arduino-esp32` core.
+* `No such file or directory.` The ELF file was not created, check instructions above.
+
+
+
 
