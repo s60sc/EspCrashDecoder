@@ -8,6 +8,11 @@ REM set espTarget to one of: esp32 esp32s2 esp32s3
 SET espTarget=esp32
 ECHO espTarget set as:  %espTarget%
 
+REM gdb path
+REM SET gdbPath=xtensa-%espTarget%-elf-gcc/esp-2021r2-patch5-8.4.0
+SET gdbPath=xtensa-esp-elf-gdb/11.2_20220823
+ECHO gdbPath set as:  %gdbPath%
+
 REM get sketch name from sketch folder
 FOR %%I IN ("%~dp0..") DO SET appname=%%~nxI
 ECHO Sketch name is:  %appname%
@@ -31,6 +36,5 @@ GOTO CheckForFile
 :FoundFile
 REM use gdb to reference addresses to source code and output to file
 SET HOME=%USERPROFILE%
-%USERPROFILE%/AppData/Local/Arduino15/packages/esp32/tools/xtensa-%espTarget%-elf-gcc/esp-2021r2-patch5-8.4.0\bin/xtensa-%espTarget%-elf-gdb.exe ../build/esp32.esp32.%espTarget%/%appname%.ino.elf --batch --command=%addresses% > %decoded% 2>nul 
-
+%USERPROFILE%/AppData/Local/Arduino15/packages/esp32/tools/%gdbPath%/bin/xtensa-%espTarget%-elf-gdb.exe ../build/esp32.esp32.%espTarget%/%appname%.ino.elf --batch --command=%addresses% > %decoded% 2>err.txt
 ECHO Finished
